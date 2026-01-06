@@ -1,0 +1,121 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String
+  fullName     String
+  phone        String?
+  isVerified   Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  printers     Printer[]
+}
+
+model Printer {
+  id                  String             @id @default(uuid())
+  ownerId             String
+  printerName         String
+  printerEmail        String             @unique
+  location            String?
+  description         String?
+  status              String             @default("active")
+  qrCodeUrl           String
+  qrCodeData          String
+  priceBwSingle       Decimal            @default(2.00)
+  priceBwDouble       Decimal            @default(3.00)
+  priceColorSingle    Decimal            @default(5.00)
+  priceColorDouble    Decimal            @default(8.00)
+  supportsColor       Boolean            @default(true)
+  supportsDoubleSided Boolean            @default(true)
+  supportedPageSizes  String[]
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  orders              PrintOrder[]
+  owner               User               @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  analytics           PrinterAnalytics[]
+
+  @@index([printerEmail])
+  @@index([ownerId])
+}
+
+model PrintOrder {
+  id                String               @id @default(uuid())
+  orderNumber       String               @unique
+  printerId         String
+  userEmail         String?
+  userPhone         String?
+  fileUrl           String
+  fileName          String
+  fileType          String
+  fileSizeBytes     BigInt
+  totalPages        Int?
+  colorMode         String
+  isDoubleSided     Boolean
+  numCopies         Int                  @default(1)
+  pageSize          String               @default("A4")
+  orientation       String               @default("portrait")
+  pricePerPage      Decimal
+  totalPagesCharged Int
+  subtotal          Decimal
+  platformFee       Decimal              @default(0.50)
+  totalAmount       Decimal
+  currency          String               @default("USD")
+  paymentIntentId   String?
+  paymentStatus     String               @default("pending")
+  paidAt            DateTime?
+  status            String               @default("pending")
+  emailSentAt       DateTime?
+  completedAt       DateTime?
+  errorMessage      String?
+  ipAddress         String?
+  userAgent         String?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  transactions      PaymentTransaction[]
+  printer           Printer              @relation(fields: [printerId], references: [id])
+
+  @@index([printerId])
+  @@index([status])
+  @@index([paymentStatus])
+}
+
+model PaymentTransaction {
+  id              String     @id @default(uuid())
+  orderId         String
+  paymentProvider String
+  transactionId   String
+  amount          Decimal
+  currency        String
+  status          String
+  paymentMethod   String?
+  rawResponse     Json?
+  createdAt       DateTime   @default(now())
+  order           PrintOrder @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([orderId])
+}
+
+model PrinterAnalytics {
+  id                String   @id @default(uuid())
+  printerId         String
+  date              DateTime @db.Date
+  totalOrders       Int      @default(0)
+  totalPagesPrinted Int      @default(0)
+  totalRevenue      Decimal  @default(0.00)
+  colorPages        Int      @default(0)
+  bwPages           Int      @default(0)
+  createdAt         DateTime @default(now())
+  printer           Printer  @relation(fields: [printerId], references: [id], onDelete: Cascade)
+
+  @@unique([printerId, date])
+  @@index([printerId, date])
+}
