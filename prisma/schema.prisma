@@ -28,7 +28,6 @@ model Printer {
   location            String?
   description         String?
   status              String 
-  name                String?
   qrCodeUrl           String?
   qrCodeData          String
   priceBwSingle       Decimal            @default(2.00)
