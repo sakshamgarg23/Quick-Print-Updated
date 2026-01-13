@@ -1,5 +1,7 @@
+// src/app/print/[printerId]/page.tsx
 import { notFound } from 'next/navigation';
 import PrintPageClient from './PrintPageClient';
+import { db } from '@/lib/db';
 
 interface PrintPageProps {
   params: Promise<{
@@ -7,31 +9,33 @@ interface PrintPageProps {
   }>;
 }
 
-async function getPrinter(printerId: string) {
-  try {
-    // Ensure you have this environment variable set in .env.local
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-    const res = await fetch(`${baseUrl}/api/public/printer/${printerId}`, {
-      cache: 'no-store',
-    });
-
-    if (!res.ok) return null;
-    return res.json();
-  } catch (error) {
-    console.error('Error fetching printer:', error);
-    return null;
-  }
-}
-
 export default async function PrintPage({ params }: PrintPageProps) {
-  // Await params for Next.js 15 compatibility
   const { printerId } = await params;
-  const printer = await getPrinter(printerId);
+  
+  const printer = await db.printer.findUnique({
+    where: { id: printerId },
+  });
 
   if (!printer) {
     notFound();
   }
 
-  // Pass the fetched printer data to the interactive Client Component
-  return <PrintPageClient printer={printer} />;
+  // Convert Prisma types to match PrintPageClient expectations
+  const printerData = {
+    id: printer.id,
+    printerName: printer.printerName,
+    status: printer.status,
+    location: printer.location ?? undefined,
+    printerEmail: printer.printerEmail,
+    description: printer.description ?? undefined,
+    priceBwSingle: Number(printer.priceBwSingle),
+    priceBwDouble: Number(printer.priceBwDouble),
+    supportsColor: printer.supportsColor,
+    priceColorSingle: printer.priceColorSingle ? Number(printer.priceColorSingle) : undefined,
+    priceColorDouble: printer.priceColorDouble ? Number(printer.priceColorDouble) : undefined,
+    supportsDoubleSided: printer.supportsDoubleSided,
+    supportedPageSizes: printer.supportedPageSizes ?? undefined,
+  };
+
+  return <PrintPageClient printer={printerData} />;
 }
