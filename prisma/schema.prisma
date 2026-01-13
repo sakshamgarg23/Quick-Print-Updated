@@ -27,8 +27,9 @@ model Printer {
   printerEmail        String             @unique
   location            String?
   description         String?
-  status              String             @default("active")
-  qrCodeUrl           String
+  status              String 
+  name                String?
+  qrCodeUrl           String?
   qrCodeData          String
   priceBwSingle       Decimal            @default(2.00)
   priceBwDouble       Decimal            @default(3.00)

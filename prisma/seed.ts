@@ -9,8 +9,7 @@ async function main() {
     update: {},
     create: {
       email: 'test@example.com',
-      name: 'Test User',
-      clerkId: 'test_clerk_id',
+      fullName: 'Test User',
       passwordHash: 'dummy_hash_for_testing', // Add this field
     },
   });

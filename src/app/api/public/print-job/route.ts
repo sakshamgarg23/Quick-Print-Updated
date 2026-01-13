@@ -2,10 +2,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { db } from '@/lib/db';
+import { createClient } from '@supabase/supabase-js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: '2025-12-15.clover', // ← Matching your version
+    apiVersion: '2025-12-15.clover',
 });
+
+// Initialize Supabase client
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_KEY!
+);
 
 export async function POST(request: NextRequest) {
   try {
@@ -74,6 +81,44 @@ export async function POST(request: NextRequest) {
     const orderNumber = `PRT-${Date.now()}`;
     const orderId = jobId;
 
+    // === UPLOAD FILE TO SUPABASE STORAGE ===
+    const timestamp = Date.now();
+    const safeFileName = `${timestamp}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+    const filePath = `uploads/${safeFileName}`;
+    console.log('📤 Attempting upload to Supabase...');
+console.log('📦 Bucket: print-files');
+console.log('📁 Path:', filePath);
+
+    // Convert file to buffer
+    const fileBuffer = Buffer.from(await file.arrayBuffer());
+    
+    // Upload to Supabase Storage
+    const { data: uploadData, error: uploadError } = await supabase.storage
+      .from('print-files')
+      .upload(filePath, fileBuffer, {
+        contentType: file.type || 'application/pdf',
+        upsert: false
+      });
+
+    if (uploadError) {
+      console.error('❌ Supabase upload error:', uploadError);
+  console.error('❌ Error details:', JSON.stringify(uploadError, null, 2));
+
+      console.error('❌ Supabase upload error:', uploadError);
+      return NextResponse.json(
+        { error: 'Failed to upload file: ' + uploadError.message },
+        { status: 500 }
+      );
+    }
+
+    // Get public URL for the uploaded file
+    const { data: { publicUrl } } = supabase.storage
+      .from('print-files')
+      .getPublicUrl(filePath);
+
+    console.log('✅ File uploaded to Supabase:', publicUrl);
+    // === END FILE UPLOAD ===
+
     // Calculate order details
     const estimatedPages = 1; // TODO: Extract actual page count from PDF
     const totalPagesCharged = estimatedPages * copies;
@@ -81,7 +126,7 @@ export async function POST(request: NextRequest) {
     const platformFee = 0.50;
     const totalAmount = subtotal + platformFee;
 
-    // Save print job to database (status: pending)
+    // Save print job to database with Supabase URL
     const printJob = await db.printOrder.create({
       data: {
         id: orderId,
@@ -89,7 +134,7 @@ export async function POST(request: NextRequest) {
         printerId,
         userEmail: customerEmail,
         userPhone: customerPhone || null,
-        fileUrl: '', // Will be updated after file upload
+        fileUrl: publicUrl, // ← Supabase public URL
         fileName: file.name,
         fileType: file.type,
         fileSizeBytes: BigInt(file.size),
