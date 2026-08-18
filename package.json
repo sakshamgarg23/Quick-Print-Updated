@@ -17,7 +17,6 @@
     "@stripe/react-stripe-js": "^5.4.1",
     "@stripe/stripe-js": "^8.6.0",
     "@supabase/supabase-js": "^2.90.1",
-    "@vercel/blob": "^2.0.0",
     "bcrypt": "^6.0.0",
     "bullmq": "^5.66.2",
     "ioredis": "^5.8.2",
