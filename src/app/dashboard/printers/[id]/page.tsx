@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import { ArrowLeft, Settings, QrCode, Download, FileText, ClipboardList } from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth';
 import { db } from '@/lib/db';
 import { getBaseUrl } from '@/lib/url';
@@ -37,14 +38,18 @@ export default async function PrinterDetailPage({ params }: { params: Promise<{ 
 
   return (
     <div>
-      <Link href="/dashboard" className="text-sm text-neutral-500 hover:text-neutral-900">
-        &larr; Printers
+      <Link href="/dashboard" className="inline-flex items-center gap-1 text-sm text-neutral-500 hover:text-neutral-900">
+        <ArrowLeft className="h-3.5 w-3.5" strokeWidth={2} />
+        Printers
       </Link>
       <h1 className="text-xl font-semibold text-neutral-900 mt-3 mb-6">{printer.printerName}</h1>
 
       <div className="grid lg:grid-cols-3 gap-6 mb-10">
         <div className="lg:col-span-2 border border-neutral-200 rounded-lg bg-white p-6">
-          <h2 className="text-sm font-semibold text-neutral-900 mb-4">Settings</h2>
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-neutral-900 mb-4">
+            <Settings className="h-4 w-4 text-neutral-400" strokeWidth={2} />
+            Settings
+          </h2>
           <PrinterForm
             key={printer.updatedAt.getTime()}
             mode="edit"
@@ -67,7 +72,10 @@ export default async function PrinterDetailPage({ params }: { params: Promise<{ 
         </div>
 
         <div className="border border-neutral-200 rounded-lg bg-white p-6">
-          <h2 className="text-sm font-semibold text-neutral-900 mb-4">QR code</h2>
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-neutral-900 mb-4">
+            <QrCode className="h-4 w-4 text-neutral-400" strokeWidth={2} />
+            QR code
+          </h2>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={qrDataUrl} alt="Printer QR code" className="w-full aspect-square border border-neutral-200 rounded-md" />
           <p className="mt-3 text-xs text-neutral-500 break-all">{printUrl}</p>
@@ -75,8 +83,9 @@ export default async function PrinterDetailPage({ params }: { params: Promise<{ 
             <a
               href={qrDataUrl}
               download={`quickprint-${printer.id}.png`}
-              className="text-xs font-medium text-neutral-900 hover:underline"
+              className="inline-flex items-center gap-1 text-xs font-medium text-neutral-900 hover:underline"
             >
+              <Download className="h-3 w-3" strokeWidth={2} />
               Download PNG
             </a>
             <CopyLinkButton url={printUrl} />
@@ -84,7 +93,10 @@ export default async function PrinterDetailPage({ params }: { params: Promise<{ 
         </div>
       </div>
 
-      <h2 className="text-sm font-semibold text-neutral-900 mb-4">Recent orders</h2>
+      <h2 className="flex items-center gap-2 text-sm font-semibold text-neutral-900 mb-4">
+        <ClipboardList className="h-4 w-4 text-neutral-400" strokeWidth={2} />
+        Recent orders
+      </h2>
       {orders.length === 0 ? (
         <p className="text-sm text-neutral-500">No orders yet.</p>
       ) : (
@@ -106,7 +118,12 @@ export default async function PrinterDetailPage({ params }: { params: Promise<{ 
               {orders.map((order) => (
                 <tr key={order.id}>
                   <td className="px-4 py-3 font-mono text-xs text-neutral-700">{order.orderNumber}</td>
-                  <td className="px-4 py-3 text-neutral-700 max-w-[160px] truncate">{order.fileName}</td>
+                  <td className="px-4 py-3 text-neutral-700 max-w-40 truncate">
+                    <span className="inline-flex items-center gap-1.5">
+                      <FileText className="h-3.5 w-3.5 shrink-0 text-neutral-400" strokeWidth={2} />
+                      <span className="truncate">{order.fileName}</span>
+                    </span>
+                  </td>
                   <td className="px-4 py-3 text-neutral-700">{order.numCopies}</td>
                   <td className="px-4 py-3 text-neutral-700">₹{Number(order.totalAmount).toFixed(2)}</td>
                   <td className="px-4 py-3 text-neutral-700">{order.paymentStatus}</td>
@@ -115,7 +132,7 @@ export default async function PrinterDetailPage({ params }: { params: Promise<{ 
                       {order.status}
                     </span>
                     {order.lastDeliveryError && (
-                      <p className="text-xs text-red-500 mt-1 max-w-[220px] truncate" title={order.lastDeliveryError}>
+                      <p className="text-xs text-red-500 mt-1 max-w-55 truncate" title={order.lastDeliveryError}>
                         {order.lastDeliveryError}
                       </p>
                     )}

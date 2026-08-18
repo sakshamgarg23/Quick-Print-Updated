@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { RefreshCw } from 'lucide-react';
 
 export default function RetryOrderButton({ orderId }: { orderId: string }) {
   const router = useRouter();
@@ -18,8 +19,9 @@ export default function RetryOrderButton({ orderId }: { orderId: string }) {
     <button
       onClick={handleRetry}
       disabled={loading}
-      className="text-xs font-medium text-neutral-900 hover:underline disabled:opacity-50"
+      className="inline-flex items-center gap-1 text-xs font-medium text-neutral-900 hover:underline disabled:opacity-50"
     >
+      <RefreshCw className={`h-3 w-3 ${loading ? 'animate-spin' : ''}`} strokeWidth={2} />
       {loading ? 'Retrying…' : 'Retry now'}
     </button>
   );

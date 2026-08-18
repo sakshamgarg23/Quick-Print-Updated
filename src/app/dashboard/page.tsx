@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { Plus, ChevronRight, Printer as PrinterIcon } from 'lucide-react';
 import { getCurrentUser } from '@/lib/auth';
 import { db } from '@/lib/db';
 
@@ -21,19 +22,24 @@ export default async function DashboardPage() {
         </div>
         <Link
           href="/dashboard/printers/new"
-          className="rounded-md bg-neutral-900 text-white text-sm font-medium px-4 py-2 hover:bg-neutral-800 transition-colors"
+          className="flex items-center gap-1.5 rounded-md bg-neutral-900 text-white text-sm font-medium px-4 py-2 hover:bg-neutral-800 transition-colors"
         >
+          <Plus className="h-4 w-4" strokeWidth={2} />
           New printer
         </Link>
       </div>
 
       {printers.length === 0 ? (
         <div className="border border-dashed border-neutral-300 rounded-lg py-16 text-center">
-          <p className="text-sm text-neutral-500">No printers yet.</p>
+          <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-neutral-100">
+            <PrinterIcon className="h-5 w-5 text-neutral-400" strokeWidth={1.75} />
+          </div>
+          <p className="mt-3 text-sm text-neutral-500">No printers yet.</p>
           <Link
             href="/dashboard/printers/new"
-            className="mt-3 inline-block text-sm font-medium text-neutral-900 hover:underline"
+            className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-neutral-900 hover:underline"
           >
+            <Plus className="h-3.5 w-3.5" strokeWidth={2} />
             Register your first printer
           </Link>
         </div>
@@ -51,10 +57,11 @@ export default async function DashboardPage() {
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium text-neutral-900">{printer.printerName}</span>
                     <span
-                      className={`text-xs px-1.5 py-0.5 rounded ${
+                      className={`inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded ${
                         isActive ? 'bg-green-50 text-green-700' : 'bg-neutral-100 text-neutral-500'
                       }`}
                     >
+                      <span className={`h-1.5 w-1.5 rounded-full ${isActive ? 'bg-green-500' : 'bg-neutral-400'}`} />
                       {isActive ? 'Active' : 'Offline'}
                     </span>
                   </div>
@@ -62,7 +69,7 @@ export default async function DashboardPage() {
                     {printer.location || 'No location set'} &middot; {printer._count.orders} orders
                   </p>
                 </div>
-                <span className="text-neutral-400 text-sm">View &rarr;</span>
+                <ChevronRight className="h-4 w-4 text-neutral-400" strokeWidth={2} />
               </Link>
             );
           })}

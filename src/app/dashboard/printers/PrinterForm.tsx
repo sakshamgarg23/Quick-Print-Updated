@@ -2,6 +2,7 @@
 
 import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
 
 const inputClass =
   'w-full rounded-md border border-neutral-300 px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:outline-none focus:ring-1 focus:ring-neutral-900 focus:border-neutral-900';
@@ -273,8 +274,9 @@ export default function PrinterForm({
       <button
         type="submit"
         disabled={isSubmitting}
-        className="rounded-md bg-neutral-900 text-white text-sm font-medium px-5 py-2.5 hover:bg-neutral-800 transition-colors disabled:opacity-50"
+        className="inline-flex items-center gap-2 rounded-md bg-neutral-900 text-white text-sm font-medium px-5 py-2.5 hover:bg-neutral-800 transition-colors disabled:opacity-50"
       >
+        {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" strokeWidth={2} />}
         {isSubmitting ? 'Saving…' : mode === 'create' ? 'Create printer' : 'Save changes'}
       </button>
     </form>
