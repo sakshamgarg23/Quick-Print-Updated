@@ -2,22 +2,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { db } from '@/lib/db';
-import { createClient } from '@supabase/supabase-js';
+import { uploadFile, getPageCount } from '@/lib/storage';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
     apiVersion: '2025-12-15.clover',
 });
 
-// Initialize Supabase client
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_KEY!
-);
-
 export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
-    
+
     const file = formData.get('file') as File;
     const printerId = formData.get('printerId') as string;
     const customerName = formData.get('customerName') as string;
@@ -28,13 +22,13 @@ export async function POST(request: NextRequest) {
     const doubleSided = formData.get('doubleSided') === 'true';
     const pageSize = formData.get('pageSize') as string;
 
-    console.log('📝 Received print job:', { 
-      printerId, 
-      customerName, 
+    console.log('📝 Received print job:', {
+      printerId,
+      customerName,
       customerEmail,
       fileName: file?.name,
       copies,
-      colorType 
+      colorType
     });
 
     if (!file || !printerId || !customerName || !customerEmail) {
@@ -49,7 +43,7 @@ export async function POST(request: NextRequest) {
     const printer = await db.printer.findUnique({
       where: { id: printerId }
     });
-    
+
     if (!printer) {
       console.error('❌ Printer not found:', printerId);
       return NextResponse.json(
@@ -68,77 +62,60 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Calculate price
     const pricePerPage = colorType === 'bw'
       ? (doubleSided ? Number(printer.priceBwDouble) : Number(printer.priceBwSingle))
       : (doubleSided ? Number(printer.priceColorDouble) : Number(printer.priceColorSingle));
-    const estimatedCost = pricePerPage * copies;
 
-    console.log('💰 Cost calculation:', { pricePerPage, copies, estimatedCost });
+    // === UPLOAD FILE TO SUPABASE STORAGE ===
+    const timestamp = Date.now();
+    const safeFileName = `${timestamp}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+    const filePath = `uploads/${safeFileName}`;
+
+    const fileBuffer = Buffer.from(await file.arrayBuffer());
+
+    let publicUrl: string;
+    try {
+      publicUrl = await uploadFile(fileBuffer, filePath, file.type || 'application/pdf');
+    } catch (uploadError) {
+      console.error('❌ Supabase upload error:', uploadError);
+      return NextResponse.json(
+        { error: 'Failed to upload file: ' + (uploadError as Error).message },
+        { status: 500 }
+      );
+    }
+
+    console.log('✅ File uploaded to Supabase:', publicUrl);
+    // === END FILE UPLOAD ===
+
+    // Count actual pages in the document so pricing reflects what's really printed
+    const pageCount = await getPageCount(fileBuffer, file.type || 'application/pdf');
+    console.log('📄 Page count:', pageCount);
+
+    const totalPagesCharged = pageCount * copies;
+    const subtotal = pricePerPage * totalPagesCharged;
+    const platformFee = 0.50;
+    const totalAmount = subtotal + platformFee;
 
     // Generate unique job ID and order number
     const jobId = `JOB-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const orderNumber = `PRT-${Date.now()}`;
     const orderId = jobId;
 
-    // === UPLOAD FILE TO SUPABASE STORAGE ===
-    const timestamp = Date.now();
-    const safeFileName = `${timestamp}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-    const filePath = `uploads/${safeFileName}`;
-    console.log('📤 Attempting upload to Supabase...');
-console.log('📦 Bucket: print-files');
-console.log('📁 Path:', filePath);
-
-    // Convert file to buffer
-    const fileBuffer = Buffer.from(await file.arrayBuffer());
-    
-    // Upload to Supabase Storage
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from('print-files')
-      .upload(filePath, fileBuffer, {
-        contentType: file.type || 'application/pdf',
-        upsert: false
-      });
-
-    if (uploadError) {
-      console.error('❌ Supabase upload error:', uploadError);
-  console.error('❌ Error details:', JSON.stringify(uploadError, null, 2));
-
-      console.error('❌ Supabase upload error:', uploadError);
-      return NextResponse.json(
-        { error: 'Failed to upload file: ' + uploadError.message },
-        { status: 500 }
-      );
-    }
-
-    // Get public URL for the uploaded file
-    const { data: { publicUrl } } = supabase.storage
-      .from('print-files')
-      .getPublicUrl(filePath);
-
-    console.log('✅ File uploaded to Supabase:', publicUrl);
-    // === END FILE UPLOAD ===
-
-    // Calculate order details
-    const estimatedPages = 1; // TODO: Extract actual page count from PDF
-    const totalPagesCharged = estimatedPages * copies;
-    const subtotal = pricePerPage * totalPagesCharged;
-    const platformFee = 0.50;
-    const totalAmount = subtotal + platformFee;
+    console.log('💰 Cost calculation:', { pricePerPage, pageCount, copies, totalPagesCharged, totalAmount });
 
     // Save print job to database with Supabase URL
-    const printJob = await db.printOrder.create({
+    await db.printOrder.create({
       data: {
         id: orderId,
         orderNumber,
         printerId,
         userEmail: customerEmail,
         userPhone: customerPhone || null,
-        fileUrl: publicUrl, // ← Supabase public URL
+        fileUrl: publicUrl,
         fileName: file.name,
         fileType: file.type,
         fileSizeBytes: BigInt(file.size),
-        totalPages: estimatedPages,
+        totalPages: pageCount,
         colorMode: colorType,
         isDoubleSided: doubleSided,
         numCopies: copies,
@@ -157,9 +134,9 @@ console.log('📁 Path:', filePath);
 
     console.log('✅ Print job saved with status: PENDING_PAYMENT');
 
-    // Create Stripe Payment Intent
+    // Create Stripe Payment Intent for the SAME amount recorded on the order
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(estimatedCost * 100), // Convert to paise
+      amount: Math.round(totalAmount * 100), // Convert to paise
       currency: 'inr',
       metadata: {
         jobId,
@@ -174,13 +151,18 @@ console.log('📁 Path:', filePath);
       description: `Print Job: ${file.name} (${copies} copies)`,
     });
 
+    await db.printOrder.update({
+      where: { id: orderId },
+      data: { paymentIntentId: paymentIntent.id },
+    });
+
     console.log('✅ Stripe payment intent created:', paymentIntent.id);
 
     // Return payment intent client secret
     return NextResponse.json({
       success: true,
       jobId,
-      estimatedCost: estimatedCost.toFixed(2),
+      estimatedCost: totalAmount.toFixed(2),
       clientSecret: paymentIntent.client_secret,
       paymentIntentId: paymentIntent.id,
       message: 'Print job created. Please complete payment.',

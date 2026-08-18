@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/internal/retry-failed-jobs",
+      "schedule": "*/5 * * * *"
+    }
+  ]
+}

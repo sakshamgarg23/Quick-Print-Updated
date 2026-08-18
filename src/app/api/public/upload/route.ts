@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { uploadFile } from '@/lib/storage';
+import { uploadFile, getPageCount } from '@/lib/storage';
 import { v4 as uuidv4 } from 'uuid';
 
 export async function POST(req: NextRequest) {
@@ -26,6 +26,7 @@ export async function POST(req: NextRequest) {
     const fileName = `uploads/${fileId}.${ext}`;
     
     const url = await uploadFile(buffer, fileName, file.type);
+    const pageCount = await getPageCount(buffer, file.type);
 
     return NextResponse.json({
       success: true,
@@ -35,7 +36,7 @@ export async function POST(req: NextRequest) {
         name: file.name,
         type: file.type,
         sizeBytes: file.size,
-        pageCount: 5,
+        pageCount,
       },
     });
   } catch (error) {
@@ -43,8 +44,3 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, error: 'Upload failed' }, { status: 500 });
   }
 }
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};

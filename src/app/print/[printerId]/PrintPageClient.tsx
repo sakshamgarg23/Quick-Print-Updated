@@ -55,12 +55,17 @@ export default function PrintPageClient({ printer }: PrintPageClientProps) {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
+  const PLATFORM_FEE = 0.50;
+
+  // Best-effort estimate only: the real page count of the uploaded file is
+  // determined server-side after upload, so the final charge (shown in the
+  // payment modal) is the authoritative amount.
   const calculatePrice = () => {
     const pricePerPage = colorType === 'bw'
       ? (doubleSided ? Number(printer.priceBwDouble) : Number(printer.priceBwSingle))
       : (doubleSided ? Number(printer.priceColorDouble || 0) : Number(printer.priceColorSingle || 0));
-    
-    return (pricePerPage * copies).toFixed(2);
+
+    return (pricePerPage * copies + PLATFORM_FEE).toFixed(2);
   };
   const handleSubmit = async () => {
     if (!selectedFile) {
@@ -475,7 +480,7 @@ export default function PrintPageClient({ printer }: PrintPageClientProps) {
                       <span className="text-slate-300 font-semibold">Estimated Total</span>
                       <div className="text-right">
                         <div className="text-3xl font-bold text-white">₹{calculatePrice()}</div>
-                        <div className="text-xs text-slate-400 mt-1">Per page estimate</div>
+                        <div className="text-xs text-slate-400 mt-1">Estimate for a 1-page file &middot; final price is based on actual page count</div>
                       </div>
                     </div>
                   </div>

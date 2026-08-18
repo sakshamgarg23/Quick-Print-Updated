@@ -1,8 +1,11 @@
 import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
 async function main() {
+  const passwordHash = await bcrypt.hash('password123', 12);
+
   // Create a test user first (if needed)
   const user = await prisma.user.upsert({
     where: { email: 'test@example.com' },
@@ -10,11 +13,11 @@ async function main() {
     create: {
       email: 'test@example.com',
       fullName: 'Test User',
-      passwordHash: 'dummy_hash_for_testing', // Add this field
+      passwordHash,
     },
   });
 
-  console.log('Created user:', user);
+  console.log('Created user:', user.email, '(password: password123)');
 
   // Create a test printer
   const printer = await prisma.printer.upsert({
@@ -27,8 +30,8 @@ async function main() {
       ownerId: user.id,
       location: 'DELHI',
       description: 'A test printer for development',
-      status: 'ACTIVE',
-      qrCodeData: JSON.stringify({ id: 'test123' }),
+      status: 'active',
+      qrCodeData: 'http://localhost:3000/print/test123',
       priceBwSingle: 2.0,
       priceBwDouble: 3.0,
       priceColorSingle: 5.0,

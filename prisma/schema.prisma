@@ -76,6 +76,9 @@ model PrintOrder {
   emailSentAt       DateTime?
   completedAt       DateTime?
   errorMessage      String?
+  deliveryAttempts  Int                  @default(0)
+  lastDeliveryError String?
+  nextRetryAt       DateTime?
   ipAddress         String?
   userAgent         String?
   createdAt         DateTime             @default(now())
