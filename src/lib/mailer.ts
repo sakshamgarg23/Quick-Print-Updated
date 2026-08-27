@@ -26,7 +26,7 @@ Customer: ${order.userEmail ?? 'unknown'}`,
       {
         filename: order.fileName,
         content: fileBuffer,
-        contentType: 'application/pdf',
+        contentType: order.fileType,
       },
     ],
   });

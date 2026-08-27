@@ -39,6 +39,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const validTypes = ['application/pdf', 'image/png', 'image/jpeg'];
+    if (!validTypes.includes(file.type)) {
+      console.error('❌ Unsupported file type:', file.type);
+      return NextResponse.json(
+        { error: 'Unsupported file type. Please upload a PDF, PNG, or JPG.' },
+        { status: 400 }
+      );
+    }
+
     // Fetch printer from database
     const printer = await db.printer.findUnique({
       where: { id: printerId }
@@ -88,7 +97,16 @@ export async function POST(request: NextRequest) {
     // === END FILE UPLOAD ===
 
     // Count actual pages in the document so pricing reflects what's really printed
-    const pageCount = await getPageCount(fileBuffer, file.type || 'application/pdf');
+    let pageCount: number;
+    try {
+      pageCount = await getPageCount(fileBuffer, file.type || 'application/pdf');
+    } catch (pageCountError) {
+      console.error('❌ Failed to read page count:', pageCountError);
+      return NextResponse.json(
+        { error: 'Could not read this file (it may be password-protected or corrupted). Please try a different file.' },
+        { status: 400 }
+      );
+    }
     console.log('📄 Page count:', pageCount);
 
     const totalPagesCharged = pageCount * copies;

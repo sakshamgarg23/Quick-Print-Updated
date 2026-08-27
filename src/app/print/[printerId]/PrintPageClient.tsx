@@ -207,7 +207,7 @@ export default function PrintPageClient({ printer }: PrintPageClientProps) {
                   ref={fileInputRef}
                   onChange={handleFileSelect}
                   className="hidden"
-                  accept="image/*,application/pdf,.ppt,.pptx"
+                  accept="image/png,image/jpeg,application/pdf"
                 />
 
                 <div 
@@ -248,7 +248,7 @@ export default function PrintPageClient({ printer }: PrintPageClientProps) {
                       </div>
                       <div>
                         <p className="text-base font-semibold text-slate-900">Click to upload or drag and drop</p>
-                        <p className="text-sm text-slate-500 mt-1">PDF, PPT, PNG, JPG up to 10MB</p>
+                        <p className="text-sm text-slate-500 mt-1">PDF, PNG, JPG up to 10MB</p>
                       </div>
                     </div>
                   )}

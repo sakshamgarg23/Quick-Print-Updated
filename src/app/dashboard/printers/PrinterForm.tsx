@@ -94,8 +94,10 @@ export default function PrinterForm({
 
       if (mode === 'create') {
         router.push(`/dashboard/printers/${data.printer.id}`);
+      } else {
+        router.refresh();
+        setIsSubmitting(false);
       }
-      router.refresh();
     } catch {
       setError('Something went wrong. Please try again.');
       setIsSubmitting(false);
