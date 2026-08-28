@@ -48,9 +48,22 @@ function CheckoutForm({
         setIsProcessing(false);
       } else if (paymentIntent && paymentIntent.status === 'succeeded') {
         console.log('✅ Payment succeeded!');
+        const confirmation = await fetch('/api/public/confirm-payment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ jobId }),
+        });
+
+        if (!confirmation.ok && confirmation.status !== 202) {
+          const body = await confirmation.json().catch(() => null);
+          setErrorMessage(body?.error || 'Payment succeeded, but the print job could not be started. Please contact the shop.');
+          setIsProcessing(false);
+          return;
+        }
+
         onSuccess();
       }
-    } catch (err) {
+    } catch {
       setErrorMessage('An unexpected error occurred');
       setIsProcessing(false);
     }
